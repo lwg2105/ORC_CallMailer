@@ -32,9 +32,14 @@ android {
     }
 
     // JavaMail uses java.* APIs not in Android SDK — suppress lint error
-    packagingOptions {
+        packagingOptions {
         resources {
-            excludes += ['META-INF/LICENSE.md', 'META-INF/LICENSE-notice.md']
+            excludes += [
+                'META-INF/LICENSE.md',
+                'META-INF/LICENSE-notice.md',
+                'META-INF/NOTICE.md',
+                'META-INF/NOTICE-notice.md',
+            ]
         }
     }
 }
