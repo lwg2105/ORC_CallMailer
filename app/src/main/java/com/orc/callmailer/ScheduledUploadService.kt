@@ -27,11 +27,18 @@ class ScheduledUploadService : Service() {
         val folder = File(prefs.watchFolder)
         if (!folder.exists()) return
         val files = folder.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) } ?: return
+        val config = SmtpConfig(
+            host = prefs.smtpHost,
+            port = prefs.smtpPort,
+            senderEmail = prefs.smtpUser,
+            senderPassword = prefs.smtpPassword,
+            recipientEmail = prefs.recipientEmail
+        )
         for (file in files) {
             if (prefs.isFileProcessed(file.name)) continue
             if (!prefs.passesNameFilter(file.name)) continue
             try {
-                EmailSender.send(prefs, file)
+                sendCallRecording(config, file)
                 prefs.markFileProcessed(file.name)
             } catch (_: Exception) {}
         }
