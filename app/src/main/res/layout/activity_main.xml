@@ -3,38 +3,81 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="24dp"
-    android:gravity="center_horizontal">
+    android:padding="20dp">
 
     <TextView
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="ORC 통화녹음 에이전트"
-        android:textSize="22sp"
+        android:text="통화녹음 자동 메일발송 앱"
+        android:textSize="18sp"
         android:textStyle="bold"
-        android:layout_marginBottom="32dp" />
+        android:gravity="center"
+        android:paddingBottom="16dp"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="4dp">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="상시 감시 모드"/>
+        <Switch
+            android:id="@+id/switchAlwaysOn"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvModeDesc"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="12sp"
+        android:textColor="#888888"
+        android:paddingBottom="12dp"/>
+
+    <LinearLayout
+        android:id="@+id/layoutSchedule"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingBottom="12dp"
+        android:visibility="gone">
+        <TextView
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="실행 시각"/>
+        <Button
+            android:id="@+id/btnPickTime"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="08:00"/>
+    </LinearLayout>
 
     <TextView
         android:id="@+id/tvStatus"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="설정 미완료"
-        android:textSize="14sp"
-        android:padding="16dp"
-        android:background="#F0F0F0"
-        android:layout_marginBottom="32dp" />
+        android:text="서비스 중지됨"
+        android:gravity="center"
+        android:paddingBottom="16dp"/>
 
     <Button
         android:id="@+id/btnToggleService"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="서비스 시작"
-        android:layout_marginBottom="16dp" />
+        android:text="서비스 시작"/>
 
     <Button
         android:id="@+id/btnSettings"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="설정" />
+        android:text="설정"
+        android:layout_marginTop="8dp"/>
 
 </LinearLayout>
