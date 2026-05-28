@@ -2,108 +2,81 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
+<LinearLayout
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="16dp">
 
-    <LinearLayout
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="vertical"
-        android:padding="24dp">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="SMTP 설정" android:textStyle="bold" android:textSize="16sp"
+        android:paddingBottom="4dp"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="12sp" android:textColor="#666666" android:paddingBottom="8dp"
+        android:text="Gmail: smtp.gmail.com:587  |  Naver: smtp.naver.com:587&#10;Outlook: smtp.office365.com:587  |  Kakao: smtp.kakao.com:587"/>
+    <EditText android:id="@+id/etSmtpHost" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="SMTP 서버 (예: smtp.gmail.com)"/>
+    <EditText android:id="@+id/etSmtpPort" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="포트 (기본: 587)"
+        android:inputType="number"/>
 
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SMTP 서버"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="계정" android:textStyle="bold" android:textSize="16sp"
+        android:paddingTop="12dp" android:paddingBottom="4dp"/>
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:textSize="12sp" android:textColor="#666666" android:paddingBottom="8dp"
+        android:text="Gmail/Naver: 일반 비밀번호 대신 앱 비밀번호 사용 필요&#10;Gmail: Google 계정 → 보안 → 2단계 인증 → 앱 비밀번호&#10;Naver: 네이버 계정 → 보안설정 → 앱 비밀번호 설정"/>
+    <EditText android:id="@+id/etSmtpUser" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="발신 이메일 주소"
+        android:inputType="textEmailAddress"/>
+    <EditText android:id="@+id/etSmtpPassword" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="비밀번호 (앱 비밀번호 권장)"
+        android:inputType="textPassword"/>
+    <EditText android:id="@+id/etRecipient" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:hint="수신자 이메일"
+        android:inputType="textEmailAddress"/>
 
-        <EditText
-            android:id="@+id/etSmtpHost"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="smtp.office365.com"
-            android:inputType="textUri"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="SMTP 포트"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/etSmtpPort"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="587"
-            android:inputType="number"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="발신 이메일 (내 Outlook 계정)"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/etSenderEmail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="me@company.com"
-            android:inputType="textEmailAddress"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="비밀번호 (앱 비밀번호 권장)"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/etSenderPassword"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="••••••••"
-            android:inputType="textPassword"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="수신 이메일 (ORC 관리 계정)"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/etRecipientEmail"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="orc-agent@company.com"
-            android:inputType="textEmailAddress"
-            android:layout_marginBottom="16dp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="감시 폴더 경로"
-            android:textStyle="bold"
-            android:layout_marginBottom="4dp" />
-
-        <EditText
-            android:id="@+id/etWatchFolder"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:hint="/storage/emulated/0/Recordings/Call"
-            android:inputType="textUri"
-            android:layout_marginBottom="24dp" />
-
-        <Button
-            android:id="@+id/btnSave"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="저장" />
-
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="감시 폴더" android:textStyle="bold" android:textSize="16sp"
+        android:paddingTop="12dp" android:paddingBottom="4dp"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal">
+        <EditText android:id="@+id/etWatchFolder" android:layout_width="0dp"
+            android:layout_height="wrap_content" android:layout_weight="1"
+            android:hint="/storage/emulated/0/Recordings/Call"/>
+        <Button android:id="@+id/btnPickFolder" android:layout_width="wrap_content"
+            android:layout_height="wrap_content" android:text="찾기"/>
     </LinearLayout>
+
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:text="이름 필터" android:textStyle="bold" android:textSize="16sp"
+        android:paddingTop="12dp" android:paddingBottom="4dp"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:orientation="horizontal" android:gravity="center_vertical"
+        android:paddingBottom="8dp">
+        <TextView android:layout_width="0dp" android:layout_height="wrap_content"
+            android:layout_weight="1" android:text="특정 이름만 발송"/>
+        <Switch android:id="@+id/switchNameFilter" android:layout_width="wrap_content"
+            android:layout_height="wrap_content"/>
+    </LinearLayout>
+    <LinearLayout android:id="@+id/layoutNameFilter" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:orientation="vertical"
+        android:visibility="gone">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:orientation="horizontal">
+            <EditText android:id="@+id/etNewName" android:layout_width="0dp"
+                android:layout_height="wrap_content" android:layout_weight="1"
+                android:hint="이름 입력"/>
+            <Button android:id="@+id/btnAddName" android:layout_width="wrap_content"
+                android:layout_height="wrap_content" android:text="추가"/>
+        </LinearLayout>
+        <LinearLayout android:id="@+id/layoutNameList" android:layout_width="match_parent"
+            android:layout_height="wrap_content" android:orientation="vertical"/>
+    </LinearLayout>
+
+    <Button android:id="@+id/btnSave" android:layout_width="match_parent"
+        android:layout_height="wrap_content" android:text="저장"
+        android:layout_marginTop="16dp"/>
+
+</LinearLayout>
 </ScrollView>
