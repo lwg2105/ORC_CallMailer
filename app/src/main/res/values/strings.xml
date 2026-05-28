@@ -1,4 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">ORC 통화녹음 에이전트</string>
+    <string name="app_name">통화녹음 자동 메일발송 앱</string>
+    <string name="settings">설정</string>
+    <string name="start_service">서비스 시작</string>
+    <string name="stop_service">서비스 중지</string>
+    <string name="service_running">서비스 실행 중</string>
+    <string name="service_stopped">서비스 중지됨</string>
+    <string name="smtp_host">SMTP 서버</string>
+    <string name="smtp_port">포트</string>
+    <string name="email_address">이메일 주소</string>
+    <string name="password">비밀번호</string>
+    <string name="recipient">수신자 이메일</string>
+    <string name="watch_folder">감시 폴더</string>
+    <string name="save">저장</string>
 </resources>
