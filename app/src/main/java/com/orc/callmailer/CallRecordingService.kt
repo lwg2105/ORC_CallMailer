@@ -21,6 +21,14 @@ class CallRecordingService : Service() {
         return START_STICKY
     }
 
+    private fun smtpConfig() = SmtpConfig(
+        host = prefs.smtpHost,
+        port = prefs.smtpPort,
+        senderEmail = prefs.smtpUser,
+        senderPassword = prefs.smtpPassword,
+        recipientEmail = prefs.recipientEmail
+    )
+
     private fun catchUpMissedFiles() {
         val folder = File(prefs.watchFolder)
         if (!folder.exists()) return
@@ -30,7 +38,7 @@ class CallRecordingService : Service() {
                 if (prefs.isFileProcessed(file.name)) continue
                 if (!prefs.passesNameFilter(file.name)) continue
                 try {
-                    EmailSender.send(prefs, file)
+                    sendCallRecording(smtpConfig(), file)
                     prefs.markFileProcessed(file.name)
                 } catch (_: Exception) {}
             }
@@ -49,7 +57,7 @@ class CallRecordingService : Service() {
                 if (!prefs.passesNameFilter(name)) return
                 Thread {
                     try {
-                        EmailSender.send(prefs, file)
+                        sendCallRecording(smtpConfig(), file)
                         prefs.markFileProcessed(name)
                     } catch (_: Exception) {}
                 }.start()
