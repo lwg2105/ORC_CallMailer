@@ -1,107 +1,91 @@
 package com.orc.callmailer
 
-import android.Manifest
+import android.app.TimePickerDialog
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.widget.Button
-import android.widget.TextView
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 
 class MainActivity : AppCompatActivity() {
     private lateinit var prefs: PreferencesHelper
-
-    private val permissionLauncher = registerForActivityResult(
-        ActivityResultContracts.RequestMultiplePermissions()
-    ) { results ->
-        val denied = results.filterValues { !it }.keys
-        if (denied.isEmpty()) {
-            startService()
-        } else {
-            Toast.makeText(this, "권한 필요: ${denied.joinToString()}", Toast.LENGTH_LONG).show()
-        }
-    }
+    private lateinit var switchAlwaysOn: Switch
+    private lateinit var tvModeDesc: TextView
+    private lateinit var layoutSchedule: LinearLayout
+    private lateinit var btnPickTime: Button
+    private lateinit var tvStatus: TextView
+    private lateinit var btnToggleService: Button
+    private var serviceRunning = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         prefs = PreferencesHelper(this)
 
+        switchAlwaysOn = findViewById(R.id.switchAlwaysOn)
+        tvModeDesc = findViewById(R.id.tvModeDesc)
+        layoutSchedule = findViewById(R.id.layoutSchedule)
+        btnPickTime = findViewById(R.id.btnPickTime)
+        tvStatus = findViewById(R.id.tvStatus)
+        btnToggleService = findViewById(R.id.btnToggleService)
+
+        switchAlwaysOn.isChecked = prefs.alwaysOnMode
+        updateModeUI(prefs.alwaysOnMode)
+        updateTimeButton()
+
+        switchAlwaysOn.setOnCheckedChangeListener { _, checked ->
+            prefs.alwaysOnMode = checked
+            updateModeUI(checked)
+        }
+
+        btnPickTime.setOnClickListener {
+            TimePickerDialog(this, { _, h, m ->
+                prefs.scheduledHour = h
+                prefs.scheduledMinute = m
+                updateTimeButton()
+                if (serviceRunning && !prefs.alwaysOnMode)
+                    ScheduledUploadService.scheduleAlarm(this, h, m)
+            }, prefs.scheduledHour, prefs.scheduledMinute, true).show()
+        }
+
+        btnToggleService.setOnClickListener {
+            if (serviceRunning) doStop() else doStart()
+        }
+
         findViewById<Button>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
-
-        findViewById<Button>(R.id.btnToggleService).setOnClickListener {
-            if (prefs.serviceEnabled) {
-                stopService(Intent(this, CallRecordingService::class.java))
-                prefs.serviceEnabled = false
-                updateStatus()
-            } else {
-                if (!prefs.isConfigured()) {
-                    Toast.makeText(this, "먼저 설정을 완료하세요", Toast.LENGTH_SHORT).show()
-                    startActivity(Intent(this, SettingsActivity::class.java))
-                    return@setOnClickListener
-                }
-                requestPermissionsAndStart()
-            }
-        }
     }
 
-    override fun onResume() {
-        super.onResume()
-        updateStatus()
-    }
-
-    private fun updateStatus() {
-        val tvStatus = findViewById<TextView>(R.id.tvStatus)
-        val btnToggle = findViewById<Button>(R.id.btnToggleService)
-        val configured = prefs.isConfigured()
-        val enabled = prefs.serviceEnabled
-
-        tvStatus.text = when {
-            !configured -> "설정 미완료"
-            enabled -> "서비스 실행 중 ▶\n감시 폴더: ${prefs.watchFolder}\n수신 메일: ${prefs.recipientEmail}"
-            else -> "서비스 중지됨 ■"
-        }
-        btnToggle.text = if (enabled) "서비스 중지" else "서비스 시작"
-    }
-
-    private fun requestPermissionsAndStart() {
-        val needed = mutableListOf<String>()
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_MEDIA_AUDIO)
-                != PackageManager.PERMISSION_GRANTED
-            ) needed.add(Manifest.permission.READ_MEDIA_AUDIO)
-
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
-                != PackageManager.PERMISSION_GRANTED
-            ) needed.add(Manifest.permission.POST_NOTIFICATIONS)
+    private fun updateModeUI(alwaysOn: Boolean) {
+        if (alwaysOn) {
+            tvModeDesc.text = "새 녹음 파일을 즉시 감지하여 발송합니다."
+            layoutSchedule.visibility = android.view.View.GONE
         } else {
-            if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED
-            ) needed.add(Manifest.permission.READ_EXTERNAL_STORAGE)
-        }
-
-        if (needed.isEmpty()) {
-            startService()
-        } else {
-            permissionLauncher.launch(needed.toTypedArray())
+            tvModeDesc.text = "지정한 시각에 미발송 파일을 일괄 발송합니다."
+            layoutSchedule.visibility = android.view.View.VISIBLE
         }
     }
 
-    private fun startService() {
-        prefs.serviceEnabled = true
-        val intent = Intent(this, CallRecordingService::class.java)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            startForegroundService(intent)
+    private fun updateTimeButton() {
+        btnPickTime.text = "%02d:%02d".format(prefs.scheduledHour, prefs.scheduledMinute)
+    }
+
+    private fun doStart() {
+        if (prefs.alwaysOnMode) {
+            startForegroundService(Intent(this, CallRecordingService::class.java))
         } else {
-            startService(intent)
+            ScheduledUploadService.scheduleAlarm(this, prefs.scheduledHour, prefs.scheduledMinute)
         }
-        updateStatus()
+        serviceRunning = true
+        tvStatus.text = if (prefs.alwaysOnMode) "감시 중" else "%02d:%02d 예약 등록됨".format(prefs.scheduledHour, prefs.scheduledMinute)
+        btnToggleService.text = "서비스 중지"
+    }
+
+    private fun doStop() {
+        stopService(Intent(this, CallRecordingService::class.java))
+        ScheduledUploadService.cancelAlarm(this)
+        serviceRunning = false
+        tvStatus.text = "서비스 중지됨"
+        btnToggleService.text = "서비스 시작"
     }
 }
