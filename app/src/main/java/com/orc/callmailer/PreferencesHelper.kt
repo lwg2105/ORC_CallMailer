@@ -5,36 +5,56 @@ import android.content.SharedPreferences
 
 class PreferencesHelper(context: Context) {
     private val prefs: SharedPreferences =
-        context.getSharedPreferences("orc_callmailer_prefs", Context.MODE_PRIVATE)
+        context.getSharedPreferences("orc_prefs", Context.MODE_PRIVATE)
 
-    var smtpHost: String
-        get() = prefs.getString("smtp_host", "smtp.office365.com") ?: "smtp.office365.com"
-        set(value) = prefs.edit().putString("smtp_host", value).apply()
+    var smtpHost: String get() = prefs.getString("smtp_host", "") ?: ""; set(v) = prefs.edit().putString("smtp_host", v).apply()
+    var smtpPort: Int get() = prefs.getInt("smtp_port", 587); set(v) = prefs.edit().putInt("smtp_port", v).apply()
+    var smtpUser: String get() = prefs.getString("smtp_user", "") ?: ""; set(v) = prefs.edit().putString("smtp_user", v).apply()
+    var smtpPassword: String get() = prefs.getString("smtp_password", "") ?: ""; set(v) = prefs.edit().putString("smtp_password", v).apply()
+    var recipientEmail: String get() = prefs.getString("recipient_email", "") ?: ""; set(v) = prefs.edit().putString("recipient_email", v).apply()
+    var watchFolder: String get() = prefs.getString("watch_folder", "/storage/emulated/0/Recordings/Call") ?: "/storage/emulated/0/Recordings/Call"; set(v) = prefs.edit().putString("watch_folder", v).apply()
+    var emailSubjectPrefix: String get() = prefs.getString("email_subject_prefix", "[ORC통화녹음]") ?: "[ORC통화녹음]"; set(v) = prefs.edit().putString("email_subject_prefix", v).apply()
 
-    var smtpPort: Int
-        get() = prefs.getInt("smtp_port", 587)
-        set(value) = prefs.edit().putInt("smtp_port", value).apply()
+    var alwaysOnMode: Boolean get() = prefs.getBoolean("always_on_mode", true); set(v) = prefs.edit().putBoolean("always_on_mode", v).apply()
+    var scheduledHour: Int get() = prefs.getInt("scheduled_hour", 8); set(v) = prefs.edit().putInt("scheduled_hour", v).apply()
+    var scheduledMinute: Int get() = prefs.getInt("scheduled_minute", 0); set(v) = prefs.edit().putInt("scheduled_minute", v).apply()
 
-    var senderEmail: String
-        get() = prefs.getString("sender_email", "") ?: ""
-        set(value) = prefs.edit().putString("sender_email", value).apply()
+    var nameFilterEnabled: Boolean get() = prefs.getBoolean("name_filter_enabled", false); set(v) = prefs.edit().putBoolean("name_filter_enabled", v).apply()
+    var filterNames: List<String>
+        get() = (prefs.getString("filter_names", "") ?: "").split(",").map { it.trim() }.filter { it.isNotEmpty() }
+        set(v) = prefs.edit().putString("filter_names", v.joinToString(",")).apply()
 
-    var senderPassword: String
-        get() = prefs.getString("sender_password", "") ?: ""
-        set(value) = prefs.edit().putString("sender_password", value).apply()
+    private val processedKey = "processed_files"
+    fun markFileProcessed(filename: String) {
+        val set = prefs.getStringSet(processedKey, mutableSetOf())!!.toMutableSet()
+        set.add(filename)
+        val trimmed = if (set.size > 1000) set.toList().takeLast(1000).toMutableSet() else set
+        prefs.edit().putStringSet(processedKey, trimmed).apply()
+    }
+    fun isFileProcessed(filename: String): Boolean =
+        prefs.getStringSet(processedKey, emptySet())!!.contains(filename)
 
-    var recipientEmail: String
-        get() = prefs.getString("recipient_email", "") ?: ""
-        set(value) = prefs.edit().putString("recipient_email", value).apply()
+    fun extractCallerName(filename: String): String? {
+        val stem = filename.substringBeforeLast(".")
+        val parts = stem.split("_")
+        if (parts.size < 3) return null
+        val p0 = parts[0].trim()
+        val p1 = parts[1].trim()
+        val p2 = parts[2].trim()
+        return when {
+            p0.length == 8 && p0.all { it.isDigit() } -> parts.drop(2).joinToString("_").trim()
+            p1.length == 6 && p1.all { it.isDigit() } &&
+            p2.length == 6 && p2.all { it.isDigit() } ->
+                p0.removePrefix("통화 녹음").trim().ifEmpty { null }
+            else -> null
+        }
+    }
 
-    var watchFolder: String
-        get() = prefs.getString("watch_folder", "/storage/emulated/0/Recordings/Call") ?: "/storage/emulated/0/Recordings/Call"
-        set(value) = prefs.edit().putString("watch_folder", value).apply()
-
-    var serviceEnabled: Boolean
-        get() = prefs.getBoolean("service_enabled", false)
-        set(value) = prefs.edit().putBoolean("service_enabled", value).apply()
-
-    fun isConfigured(): Boolean =
-        senderEmail.isNotBlank() && senderPassword.isNotBlank() && recipientEmail.isNotBlank()
+    fun passesNameFilter(filename: String): Boolean {
+        if (!nameFilterEnabled) return true
+        val names = filterNames
+        if (names.isEmpty()) return true
+        val callerName = extractCallerName(filename) ?: return false
+        return names.any { callerName.contains(it, ignoreCase = true) }
+    }
 }
