@@ -24,6 +24,21 @@ class PreferencesHelper(context: Context) {
         get() = (prefs.getString("filter_names", "") ?: "").split(",").map { it.trim() }.filter { it.isNotEmpty() }
         set(v) = prefs.edit().putString("filter_names", v.joinToString(",")).apply()
 
+    var isServiceRunning: Boolean get() = prefs.getBoolean("service_running", false); set(v) = prefs.edit().putBoolean("service_running", v).apply()
+
+    var lastError: String get() = prefs.getString("last_error", "") ?: ""; set(v) = prefs.edit().putString("last_error", v).apply()
+    var lastErrorTime: Long get() = prefs.getLong("last_error_time", 0L); set(v) = prefs.edit().putLong("last_error_time", v).apply()
+
+    fun recordError(msg: String) {
+        lastError = msg
+        lastErrorTime = System.currentTimeMillis()
+    }
+
+    fun clearError() {
+        lastError = ""
+        lastErrorTime = 0L
+    }
+
     private val processedKey = "processed_files"
     fun markFileProcessed(filename: String) {
         val set = prefs.getStringSet(processedKey, mutableSetOf())!!.toMutableSet()
