@@ -11,8 +11,9 @@ android {
         applicationId "com.orc.callmailer"
         minSdk 26
         targetSdk 34
-        versionCode (System.getenv("BUILD_NUMBER") ?: "1").toInteger()
-        versionName System.getenv("BUILD_NUMBER") ?: "dev"
+        def bn = System.getenv("BUILD_NUMBER")
+        versionCode bn != null ? bn.toInteger() : 1
+        versionName bn != null ? bn : "dev"
     }
 
     buildTypes {
