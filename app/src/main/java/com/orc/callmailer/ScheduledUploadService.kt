@@ -25,8 +25,15 @@ class ScheduledUploadService : Service() {
     private fun scanAndSendAll() {
         val prefs = PreferencesHelper(this)
         val folder = File(prefs.watchFolder)
-        if (!folder.exists()) return
-        val files = folder.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) } ?: return
+        if (!folder.exists()) {
+            prefs.recordError("감시 폴더 없음: ${prefs.watchFolder}")
+            return
+        }
+        val files = folder.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) }
+        if (files == null) {
+            prefs.recordError("폴더 읽기 실패 (권한 확인 필요): ${prefs.watchFolder}")
+            return
+        }
         val config = SmtpConfig(
             host = prefs.smtpHost,
             port = prefs.smtpPort,
@@ -40,7 +47,9 @@ class ScheduledUploadService : Service() {
             try {
                 sendCallRecording(config, file)
                 prefs.markFileProcessed(file.name)
-            } catch (_: Exception) {}
+            } catch (e: Exception) {
+                prefs.recordError("발송 실패 [${file.name}]: ${e.message}")
+            }
         }
     }
 
