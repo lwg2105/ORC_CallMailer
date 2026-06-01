@@ -26,19 +26,21 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvStatus: TextView
     private lateinit var btnToggleService: Button
     private lateinit var tvError: TextView
+    private lateinit var btnUpdate: Button
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
         prefs = PreferencesHelper(this)
 
-        switchAlwaysOn = findViewById(R.id.switchAlwaysOn)
-        tvModeDesc = findViewById(R.id.tvModeDesc)
-        layoutSchedule = findViewById(R.id.layoutSchedule)
-        btnPickTime = findViewById(R.id.btnPickTime)
-        tvStatus = findViewById(R.id.tvStatus)
-        btnToggleService = findViewById(R.id.btnToggleService)
-        tvError = findViewById(R.id.tvError)
+        switchAlwaysOn    = findViewById(R.id.switchAlwaysOn)
+        tvModeDesc        = findViewById(R.id.tvModeDesc)
+        layoutSchedule    = findViewById(R.id.layoutSchedule)
+        btnPickTime       = findViewById(R.id.btnPickTime)
+        tvStatus          = findViewById(R.id.tvStatus)
+        btnToggleService  = findViewById(R.id.btnToggleService)
+        tvError           = findViewById(R.id.tvError)
+        btnUpdate         = findViewById(R.id.btnUpdate)
 
         switchAlwaysOn.isChecked = prefs.alwaysOnMode
         updateModeUI(prefs.alwaysOnMode)
@@ -79,6 +81,18 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         updateServiceUI()
         refreshErrorDisplay()
+        checkForUpdate()
+    }
+
+    private fun checkForUpdate() {
+        val current = BuildConfig.VERSION_CODE
+        UpdateChecker.checkAsync(current) { latest, url ->
+            btnUpdate.text = "업데이트 v$latest 다운로드"
+            btnUpdate.visibility = View.VISIBLE
+            btnUpdate.setOnClickListener {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+            }
+        }
     }
 
     private fun checkStoragePermission() {
