@@ -11,8 +11,8 @@ android {
         applicationId "com.orc.callmailer"
         minSdk 26
         targetSdk 34
-        versionCode 1
-        versionName "1.0"
+        versionCode (System.getenv("BUILD_NUMBER") ?: "1").toInteger()
+        versionName System.getenv("BUILD_NUMBER") ?: "dev"
     }
 
     buildTypes {
@@ -31,8 +31,7 @@ android {
         jvmTarget = '17'
     }
 
-    // JavaMail uses java.* APIs not in Android SDK — suppress lint error
-        packagingOptions {
+    packagingOptions {
         resources {
             excludes += [
                 'META-INF/LICENSE.md',
@@ -47,11 +46,7 @@ android {
 dependencies {
     implementation 'androidx.core:core-ktx:1.13.1'
     implementation 'androidx.appcompat:appcompat:1.7.0'
-
-    // JavaMail for Android (SMTP)
     implementation 'com.sun.mail:android-mail:1.6.7'
     implementation 'com.sun.mail:android-activation:1.6.7'
-
-    // Coroutines
     implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0'
 }
