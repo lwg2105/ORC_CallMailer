@@ -29,10 +29,22 @@ jobs:
       - name: Accept Android SDK licenses
         run: yes | sdkmanager --licenses || true
 
+      - name: Set build version
+        run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
+
       - name: Build debug APK
         run: gradle :app:assembleDebug
 
-      - name: Upload APK
+      - name: Create GitHub Release
+        run: |
+          gh release create "v${{ env.BUILD_NUMBER }}" \
+            --title "v${{ env.BUILD_NUMBER }}" \
+            --notes "자동 빌드 #${{ env.BUILD_NUMBER }}" \
+            app/build/outputs/apk/debug/app-debug.apk
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
           name: ORC-CallMailer-debug
