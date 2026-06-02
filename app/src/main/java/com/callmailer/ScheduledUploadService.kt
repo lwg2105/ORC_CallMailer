@@ -20,6 +20,7 @@ class ScheduledUploadService : Service() {
 
     private fun scanAndSendAll() {
         val prefs = PreferencesHelper(this)
+        prefs.migrateProcessedFilesToHistory()
         val folder = File(prefs.watchFolder)
         if (!folder.exists()) { prefs.recordError("감시 폴더 없음: ${prefs.watchFolder}"); return }
         val files = folder.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) }
