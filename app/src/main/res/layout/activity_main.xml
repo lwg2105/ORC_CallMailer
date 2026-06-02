@@ -65,13 +65,29 @@
         android:layout_height="wrap_content"
         android:text="서비스 중지됨"
         android:gravity="center"
-        android:paddingBottom="16dp"/>
+        android:paddingBottom="4dp"/>
+
+    <TextView
+        android:id="@+id/tvHistorySummary"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:textSize="12sp"
+        android:textColor="#4CAF50"
+        android:paddingBottom="12dp"/>
 
     <Button
         android:id="@+id/btnToggleService"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="서비스 시작"/>
+
+    <Button
+        android:id="@+id/btnHistory"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="이력 보기"
+        android:layout_marginTop="8dp"/>
 
     <Button
         android:id="@+id/btnSettings"
