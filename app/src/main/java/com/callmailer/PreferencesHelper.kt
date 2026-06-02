@@ -56,7 +56,22 @@ class PreferencesHelper(context: Context) {
 
     // --- 이력 로그 ---
     private val historyKey = "history_log"
+    private val historyMigratedKey = "history_migrated"
     private val maxHistory = 200
+
+    // processedFiles Set → 이력으로 1회 마이그레이션 (파일이 삭제돼도 복원 가능)
+    fun migrateProcessedFilesToHistory() {
+        if (prefs.getBoolean(historyMigratedKey, false)) return
+        val processed = prefs.getStringSet(processedKey, emptySet())!!
+        if (processed.isEmpty()) { prefs.edit().putBoolean(historyMigratedKey, true).apply(); return }
+        val historyFilenames = getHistory().map { it.filename }.toSet()
+        for (filename in processed) {
+            if (!historyFilenames.contains(filename)) {
+                addHistoryEntry(filename, "sent", -1L)  // -1 = 날짜 불명 (이전 기록)
+            }
+        }
+        prefs.edit().putBoolean(historyMigratedKey, true).apply()
+    }
 
     fun addHistoryEntry(filename: String, status: String, timestamp: Long = System.currentTimeMillis()) {
         val callerName = extractCallerName(filename)
@@ -76,7 +91,6 @@ class PreferencesHelper(context: Context) {
         prefs.edit().putString(historyKey, trimmed.toString()).apply()
     }
 
-    // 이미 이력에 있으면 건너뜀 — 이력 기능 없던 시절에 전송된 파일 소급 등록용
     fun addHistoryEntryIfAbsent(filename: String, status: String, timestamp: Long) {
         val arr = try { JSONArray(prefs.getString(historyKey, "[]")) } catch (_: Exception) { JSONArray() }
         for (i in 0 until arr.length()) {
@@ -100,7 +114,11 @@ class PreferencesHelper(context: Context) {
         return list.reversed()
     }
 
-    fun clearHistory() = prefs.edit().putString(historyKey, "[]").apply()
+    fun clearHistory() {
+        prefs.edit().putString(historyKey, "[]")
+            .putBoolean(historyMigratedKey, false)  // 초기화 시 마이그레이션 플래그도 리셋
+            .apply()
+    }
 
     // --- 파일명 파싱 ---
     fun extractCallerName(filename: String): String? {
