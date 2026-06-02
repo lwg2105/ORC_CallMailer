@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -31,6 +30,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnUpdate: Button
 
     private var updateUrl: String? = null
+    private var checkFailed = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -52,10 +52,8 @@ class MainActivity : AppCompatActivity() {
         updateTimeButton()
 
         switchAlwaysOn.setOnCheckedChangeListener { _, checked ->
-            prefs.alwaysOnMode = checked
-            updateModeUI(checked)
+            prefs.alwaysOnMode = checked; updateModeUI(checked)
         }
-
         btnPickTime.setOnClickListener {
             TimePickerDialog(this, { _, h, m ->
                 prefs.scheduledHour = h; prefs.scheduledMinute = m
@@ -64,15 +62,16 @@ class MainActivity : AppCompatActivity() {
                     ScheduledUploadService.scheduleAlarm(this, h, m)
             }, prefs.scheduledHour, prefs.scheduledMinute, true).show()
         }
-
         btnToggleService.setOnClickListener { if (prefs.isServiceRunning) doStop() else doStart() }
         tvError.setOnClickListener { prefs.clearError(); tvError.visibility = View.GONE }
 
         btnUpdate.setOnClickListener {
-            if (updateUrl != null) {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)))
-            } else {
-                checkForUpdate()
+            when {
+                updateUrl != null ->
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)))
+                checkFailed ->
+                    startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(UpdateChecker.RELEASES_URL)))
+                else -> checkForUpdate()
             }
         }
 
@@ -91,34 +90,38 @@ class MainActivity : AppCompatActivity() {
         updateServiceUI()
         refreshErrorDisplay()
         refreshHistorySummary()
-        // 업데이트가 아직 발견되지 않은 경우에만 자동 체크
-        if (updateUrl == null) checkForUpdate()
+        if (updateUrl == null && !checkFailed) checkForUpdate()
     }
 
     private fun checkForUpdate() {
         updateUrl = null
+        checkFailed = false
         btnUpdate.isEnabled = false
-        btnUpdate.text = "버전 확인 중..."
-        btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF9E9E9E.toInt())
+        setUpdateButton("버전 확인 중...", 0xFF9E9E9E)
 
-        UpdateChecker.checkAsync(BuildConfig.VERSION_CODE,
+        UpdateChecker.checkAsync(
+            currentVersion = BuildConfig.VERSION_CODE,
             onUpdate = { latest, url ->
                 updateUrl = url
                 btnUpdate.isEnabled = true
-                btnUpdate.text = "업데이트 v$latest 다운로드"
-                btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF2196F3.toInt())
+                setUpdateButton("업데이트 v$latest 다운로드", 0xFF2196F3)
             },
             onUpToDate = { current ->
                 btnUpdate.isEnabled = true
-                btnUpdate.text = "최신 버전 (v$current)  ↻"
-                btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF9E9E9E.toInt())
+                setUpdateButton("최신 버전 (v$current)  ↻", 0xFF9E9E9E)
             },
-            onError = {
+            onError = { msg ->
+                checkFailed = true
                 btnUpdate.isEnabled = true
-                btnUpdate.text = "버전 확인 실패 — 탭하여 재시도"
-                btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF9E9E9E.toInt())
+                setUpdateButton("버전 확인 실패 — 탭하면 릴리즈 페이지 열기", 0xFF9E9E9E)
+                Toast.makeText(this, "업데이트 확인 실패: $msg", Toast.LENGTH_SHORT).show()
             }
         )
+    }
+
+    private fun setUpdateButton(text: String, color: Long) {
+        btnUpdate.text = text
+        btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(color.toInt())
     }
 
     private fun refreshHistorySummary() {
