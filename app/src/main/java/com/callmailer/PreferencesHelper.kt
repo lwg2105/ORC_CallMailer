@@ -2,6 +2,15 @@ package com.callmailer
 
 import android.content.Context
 import android.content.SharedPreferences
+import org.json.JSONArray
+import org.json.JSONObject
+
+data class HistoryEntry(
+    val filename: String,
+    val callerName: String?,
+    val timestamp: Long,
+    val status: String  // "sent" | "skipped"
+)
 
 class PreferencesHelper(context: Context) {
     private val prefs: SharedPreferences =
@@ -29,16 +38,10 @@ class PreferencesHelper(context: Context) {
     var lastError: String get() = prefs.getString("last_error", "") ?: ""; set(v) = prefs.edit().putString("last_error", v).apply()
     var lastErrorTime: Long get() = prefs.getLong("last_error_time", 0L); set(v) = prefs.edit().putLong("last_error_time", v).apply()
 
-    fun recordError(msg: String) {
-        lastError = msg
-        lastErrorTime = System.currentTimeMillis()
-    }
+    fun recordError(msg: String) { lastError = msg; lastErrorTime = System.currentTimeMillis() }
+    fun clearError() { lastError = ""; lastErrorTime = 0L }
 
-    fun clearError() {
-        lastError = ""
-        lastErrorTime = 0L
-    }
-
+    // --- 발송 완료 파일 추적 (빠른 중복 체크용 Set) ---
     private val processedKey = "processed_files"
     fun markFileProcessed(filename: String) {
         val set = prefs.getStringSet(processedKey, mutableSetOf())!!.toMutableSet()
@@ -49,17 +52,61 @@ class PreferencesHelper(context: Context) {
     fun isFileProcessed(filename: String): Boolean =
         prefs.getStringSet(processedKey, emptySet())!!.contains(filename)
 
+    fun clearProcessedFiles() {
+        prefs.edit().putStringSet(processedKey, mutableSetOf()).apply()
+    }
+
+    // --- 이력 로그 ---
+    private val historyKey = "history_log"
+    private val maxHistory = 200
+
+    fun addHistoryEntry(filename: String, status: String) {
+        val callerName = extractCallerName(filename)
+        val arr = try { JSONArray(prefs.getString(historyKey, "[]")) } catch (_: Exception) { JSONArray() }
+        val entry = JSONObject().apply {
+            put("fn", filename)
+            if (callerName != null) put("cn", callerName) else put("cn", JSONObject.NULL)
+            put("ts", System.currentTimeMillis())
+            put("st", status)
+        }
+        arr.put(entry)
+        // 최대 200개 유지 (오래된 것 삭제)
+        val trimmed = if (arr.length() > maxHistory) {
+            val newArr = JSONArray()
+            for (i in (arr.length() - maxHistory) until arr.length()) newArr.put(arr.get(i))
+            newArr
+        } else arr
+        prefs.edit().putString(historyKey, trimmed.toString()).apply()
+    }
+
+    fun getHistory(): List<HistoryEntry> {
+        val arr = try { JSONArray(prefs.getString(historyKey, "[]")) } catch (_: Exception) { JSONArray() }
+        val list = mutableListOf<HistoryEntry>()
+        for (i in 0 until arr.length()) {
+            val obj = arr.getJSONObject(i)
+            list.add(HistoryEntry(
+                filename = obj.getString("fn"),
+                callerName = if (obj.isNull("cn")) null else obj.getString("cn"),
+                timestamp = obj.getLong("ts"),
+                status = obj.getString("st")
+            ))
+        }
+        return list.reversed()  // 최신순
+    }
+
+    fun clearHistory() {
+        prefs.edit().putString(historyKey, "[]").apply()
+    }
+
+    // --- 파일명 파싱 ---
     fun extractCallerName(filename: String): String? {
         val stem = filename.substringBeforeLast(".")
         val parts = stem.split("_")
         if (parts.size < 3) return null
-        val p0 = parts[0].trim()
-        val p1 = parts[1].trim()
-        val p2 = parts[2].trim()
+        val p0 = parts[0].trim(); val p1 = parts[1].trim(); val p2 = parts[2].trim()
         return when {
             p0.length == 8 && p0.all { it.isDigit() } -> parts.drop(2).joinToString("_").trim()
-            p1.length == 6 && p1.all { it.isDigit() } &&
-            p2.length == 6 && p2.all { it.isDigit() } ->
+            p1.length == 6 && p1.all { it.isDigit() } && p2.length == 6 && p2.all { it.isDigit() } ->
                 p0.removePrefix("통화 녹음").trim().ifEmpty { null }
             else -> null
         }
