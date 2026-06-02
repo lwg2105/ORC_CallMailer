@@ -75,13 +75,14 @@ class HistoryActivity : AppCompatActivity() {
                 setBackgroundColor(if (isSent) 0xFFE8F5E9.toInt() else 0xFFF5F5F5.toInt())
             }
 
-            // 상단 행: 시각 + 상태 배지
             val rowTop = LinearLayout(this).apply {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
             }
+            val timeText = if (entry.timestamp <= 0L) "이전 기록"
+                           else sdf.format(Date(entry.timestamp))
             val tvTime = TextView(this).apply {
-                text = sdf.format(Date(entry.timestamp))
+                text = timeText
                 setTextColor(Color.GRAY)
                 textSize = 12f
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -96,7 +97,6 @@ class HistoryActivity : AppCompatActivity() {
             rowTop.addView(tvTime)
             rowTop.addView(tvBadge)
 
-            // 발신자명
             val displayName = entry.callerName ?: entry.filename.substringBeforeLast(".")
             val tvName = TextView(this).apply {
                 text = displayName
@@ -104,8 +104,6 @@ class HistoryActivity : AppCompatActivity() {
                 setTextColor(Color.BLACK)
                 setPadding(0, 4, 0, 2)
             }
-
-            // 파일명
             val tvFile = TextView(this).apply {
                 text = entry.filename
                 textSize = 11f
@@ -116,14 +114,12 @@ class HistoryActivity : AppCompatActivity() {
             card.addView(tvName)
             card.addView(tvFile)
 
-            // 구분선
             val divider = View(this).apply {
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1).apply {
                     setMargins(0, 8, 0, 0)
                 }
                 setBackgroundColor(Color.LTGRAY)
             }
-
             layoutList.addView(card)
             layoutList.addView(divider)
         }
