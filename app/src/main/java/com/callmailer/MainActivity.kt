@@ -24,6 +24,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var layoutSchedule: LinearLayout
     private lateinit var btnPickTime: Button
     private lateinit var tvStatus: TextView
+    private lateinit var tvHistorySummary: TextView
     private lateinit var btnToggleService: Button
     private lateinit var tvError: TextView
     private lateinit var btnUpdate: Button
@@ -33,14 +34,15 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
         prefs = PreferencesHelper(this)
 
-        switchAlwaysOn    = findViewById(R.id.switchAlwaysOn)
-        tvModeDesc        = findViewById(R.id.tvModeDesc)
-        layoutSchedule    = findViewById(R.id.layoutSchedule)
-        btnPickTime       = findViewById(R.id.btnPickTime)
-        tvStatus          = findViewById(R.id.tvStatus)
-        btnToggleService  = findViewById(R.id.btnToggleService)
-        tvError           = findViewById(R.id.tvError)
-        btnUpdate         = findViewById(R.id.btnUpdate)
+        switchAlwaysOn   = findViewById(R.id.switchAlwaysOn)
+        tvModeDesc       = findViewById(R.id.tvModeDesc)
+        layoutSchedule   = findViewById(R.id.layoutSchedule)
+        btnPickTime      = findViewById(R.id.btnPickTime)
+        tvStatus         = findViewById(R.id.tvStatus)
+        tvHistorySummary = findViewById(R.id.tvHistorySummary)
+        btnToggleService = findViewById(R.id.btnToggleService)
+        tvError          = findViewById(R.id.tvError)
+        btnUpdate        = findViewById(R.id.btnUpdate)
 
         switchAlwaysOn.isChecked = prefs.alwaysOnMode
         updateModeUI(prefs.alwaysOnMode)
@@ -53,21 +55,19 @@ class MainActivity : AppCompatActivity() {
 
         btnPickTime.setOnClickListener {
             TimePickerDialog(this, { _, h, m ->
-                prefs.scheduledHour = h
-                prefs.scheduledMinute = m
+                prefs.scheduledHour = h; prefs.scheduledMinute = m
                 updateTimeButton()
                 if (prefs.isServiceRunning && !prefs.alwaysOnMode)
                     ScheduledUploadService.scheduleAlarm(this, h, m)
             }, prefs.scheduledHour, prefs.scheduledMinute, true).show()
         }
 
-        btnToggleService.setOnClickListener {
-            if (prefs.isServiceRunning) doStop() else doStart()
-        }
+        btnToggleService.setOnClickListener { if (prefs.isServiceRunning) doStop() else doStart() }
 
-        tvError.setOnClickListener {
-            prefs.clearError()
-            tvError.visibility = View.GONE
+        tvError.setOnClickListener { prefs.clearError(); tvError.visibility = View.GONE }
+
+        findViewById<Button>(R.id.btnHistory).setOnClickListener {
+            startActivity(Intent(this, HistoryActivity::class.java))
         }
 
         findViewById<Button>(R.id.btnSettings).setOnClickListener {
@@ -81,58 +81,56 @@ class MainActivity : AppCompatActivity() {
         super.onResume()
         updateServiceUI()
         refreshErrorDisplay()
+        refreshHistorySummary()
         checkForUpdate()
     }
 
+    private fun refreshHistorySummary() {
+        val history = prefs.getHistory()
+        if (history.isEmpty()) {
+            tvHistorySummary.text = ""
+            return
+        }
+        val sentCount = history.count { it.status == "sent" }
+        val sdf = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
+        val lastSent = history.firstOrNull { it.status == "sent" }
+        val lastTime = if (lastSent != null) sdf.format(Date(lastSent.timestamp)) else "-"
+        tvHistorySummary.text = "누적 전송 ${sentCount}건  |  최근: $lastTime"
+    }
+
     private fun checkForUpdate() {
-        val current = BuildConfig.VERSION_CODE
-        UpdateChecker.checkAsync(current) { latest, url ->
+        UpdateChecker.checkAsync(BuildConfig.VERSION_CODE) { latest, url ->
             btnUpdate.text = "업데이트 v$latest 다운로드"
             btnUpdate.visibility = View.VISIBLE
-            btnUpdate.setOnClickListener {
-                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
-            }
+            btnUpdate.setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
         }
     }
 
     private fun checkStoragePermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             if (!Environment.isExternalStorageManager()) {
-                Toast.makeText(this,
-                    "파일 접근 권한이 필요합니다. 설정에서 '모든 파일 접근 허용' 후 돌아오세요.",
-                    Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "파일 접근 권한이 필요합니다. 설정에서 '모든 파일 접근 허용' 후 돌아오세요.", Toast.LENGTH_LONG).show()
                 try {
-                    startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-                        Uri.parse("package:$packageName")))
+                    startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:$packageName")))
                 } catch (_: Exception) {
                     startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION))
                 }
             }
-        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this,
-                arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 100)
+        } else if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE), 100)
         }
     }
 
     private fun updateModeUI(alwaysOn: Boolean) {
-        if (alwaysOn) {
-            tvModeDesc.text = "새 녹음 파일을 즉시 감지하여 발송합니다."
-            layoutSchedule.visibility = View.GONE
-        } else {
-            tvModeDesc.text = "지정한 시각에 미발송 파일을 일괄 발송합니다."
-            layoutSchedule.visibility = View.VISIBLE
-        }
+        tvModeDesc.text = if (alwaysOn) "새 녹음 파일을 즉시 감지하여 발송합니다." else "지정한 시각에 미발송 파일을 일괄 발송합니다."
+        layoutSchedule.visibility = if (alwaysOn) View.GONE else View.VISIBLE
     }
 
-    private fun updateTimeButton() {
-        btnPickTime.text = "%02d:%02d".format(prefs.scheduledHour, prefs.scheduledMinute)
-    }
+    private fun updateTimeButton() { btnPickTime.text = "%02d:%02d".format(prefs.scheduledHour, prefs.scheduledMinute) }
 
     private fun updateServiceUI() {
         if (prefs.isServiceRunning) {
-            tvStatus.text = if (prefs.alwaysOnMode) "감시 중"
-                            else "%02d:%02d 예약 등록됨".format(prefs.scheduledHour, prefs.scheduledMinute)
+            tvStatus.text = if (prefs.alwaysOnMode) "감시 중" else "%02d:%02d 예약 등록됨".format(prefs.scheduledHour, prefs.scheduledMinute)
             btnToggleService.text = "서비스 중지"
         } else {
             tvStatus.text = "서비스 중지됨"
@@ -142,26 +140,19 @@ class MainActivity : AppCompatActivity() {
 
     private fun refreshErrorDisplay() {
         val err = prefs.lastError
-        if (err.isEmpty()) {
-            tvError.visibility = View.GONE
-        } else {
-            val time = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(prefs.lastErrorTime))
-            tvError.text = "⚠ 오류 ($time): $err\n[탭하여 닫기]"
-            tvError.visibility = View.VISIBLE
-        }
+        if (err.isEmpty()) { tvError.visibility = View.GONE; return }
+        val time = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(prefs.lastErrorTime))
+        tvError.text = "⚠ 오류 ($time): $err\n[탭하여 닫기]"
+        tvError.visibility = View.VISIBLE
     }
 
     private fun doStart() {
         if (prefs.smtpHost.isEmpty() || prefs.smtpUser.isEmpty() || prefs.recipientEmail.isEmpty()) {
-            Toast.makeText(this, "설정에서 SMTP 정보를 먼저 입력하세요.", Toast.LENGTH_LONG).show()
-            return
+            Toast.makeText(this, "설정에서 SMTP 정보를 먼저 입력하세요.", Toast.LENGTH_LONG).show(); return
         }
         prefs.isServiceRunning = true
-        if (prefs.alwaysOnMode) {
-            startForegroundService(Intent(this, CallRecordingService::class.java))
-        } else {
-            ScheduledUploadService.scheduleAlarm(this, prefs.scheduledHour, prefs.scheduledMinute)
-        }
+        if (prefs.alwaysOnMode) startForegroundService(Intent(this, CallRecordingService::class.java))
+        else ScheduledUploadService.scheduleAlarm(this, prefs.scheduledHour, prefs.scheduledMinute)
         updateServiceUI()
     }
 
