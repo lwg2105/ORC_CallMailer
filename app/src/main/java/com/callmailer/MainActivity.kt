@@ -4,6 +4,7 @@ import android.Manifest
 import android.app.TimePickerDialog
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.graphics.Color
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -28,6 +29,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnToggleService: Button
     private lateinit var tvError: TextView
     private lateinit var btnUpdate: Button
+
+    private var updateUrl: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -63,13 +66,19 @@ class MainActivity : AppCompatActivity() {
         }
 
         btnToggleService.setOnClickListener { if (prefs.isServiceRunning) doStop() else doStart() }
-
         tvError.setOnClickListener { prefs.clearError(); tvError.visibility = View.GONE }
+
+        btnUpdate.setOnClickListener {
+            if (updateUrl != null) {
+                startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(updateUrl)))
+            } else {
+                checkForUpdate()
+            }
+        }
 
         findViewById<Button>(R.id.btnHistory).setOnClickListener {
             startActivity(Intent(this, HistoryActivity::class.java))
         }
-
         findViewById<Button>(R.id.btnSettings).setOnClickListener {
             startActivity(Intent(this, SettingsActivity::class.java))
         }
@@ -82,28 +91,45 @@ class MainActivity : AppCompatActivity() {
         updateServiceUI()
         refreshErrorDisplay()
         refreshHistorySummary()
-        checkForUpdate()
+        // 업데이트가 아직 발견되지 않은 경우에만 자동 체크
+        if (updateUrl == null) checkForUpdate()
+    }
+
+    private fun checkForUpdate() {
+        updateUrl = null
+        btnUpdate.isEnabled = false
+        btnUpdate.text = "버전 확인 중..."
+        btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF9E9E9E.toInt())
+
+        UpdateChecker.checkAsync(BuildConfig.VERSION_CODE,
+            onUpdate = { latest, url ->
+                updateUrl = url
+                btnUpdate.isEnabled = true
+                btnUpdate.text = "업데이트 v$latest 다운로드"
+                btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF2196F3.toInt())
+            },
+            onUpToDate = { current ->
+                btnUpdate.isEnabled = true
+                btnUpdate.text = "최신 버전 (v$current)  ↻"
+                btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF9E9E9E.toInt())
+            },
+            onError = {
+                btnUpdate.isEnabled = true
+                btnUpdate.text = "버전 확인 실패 — 탭하여 재시도"
+                btnUpdate.backgroundTintList = android.content.res.ColorStateList.valueOf(0xFF9E9E9E.toInt())
+            }
+        )
     }
 
     private fun refreshHistorySummary() {
         val history = prefs.getHistory()
-        if (history.isEmpty()) {
-            tvHistorySummary.text = ""
-            return
-        }
+        if (history.isEmpty()) { tvHistorySummary.text = ""; return }
         val sentCount = history.count { it.status == "sent" }
-        val sdf = SimpleDateFormat("MM/dd HH:mm", Locale.getDefault())
         val lastSent = history.firstOrNull { it.status == "sent" }
-        val lastTime = if (lastSent != null) sdf.format(Date(lastSent.timestamp)) else "-"
+        val lastTime = if (lastSent != null)
+            SimpleDateFormat("MM/dd HH:mm", Locale.getDefault()).format(Date(lastSent.timestamp))
+        else "-"
         tvHistorySummary.text = "누적 전송 ${sentCount}건  |  최근: $lastTime"
-    }
-
-    private fun checkForUpdate() {
-        UpdateChecker.checkAsync(BuildConfig.VERSION_CODE) { latest, url ->
-            btnUpdate.text = "업데이트 v$latest 다운로드"
-            btnUpdate.visibility = View.VISIBLE
-            btnUpdate.setOnClickListener { startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-        }
     }
 
     private fun checkStoragePermission() {
