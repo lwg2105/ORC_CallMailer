@@ -41,7 +41,7 @@ class PreferencesHelper(context: Context) {
     fun recordError(msg: String) { lastError = msg; lastErrorTime = System.currentTimeMillis() }
     fun clearError() { lastError = ""; lastErrorTime = 0L }
 
-    // --- 발송 완료 파일 추적 (빠른 중복 체크용 Set) ---
+    // --- 발송 완료 파일 추적 ---
     private val processedKey = "processed_files"
     fun markFileProcessed(filename: String) {
         val set = prefs.getStringSet(processedKey, mutableSetOf())!!.toMutableSet()
@@ -51,32 +51,38 @@ class PreferencesHelper(context: Context) {
     }
     fun isFileProcessed(filename: String): Boolean =
         prefs.getStringSet(processedKey, emptySet())!!.contains(filename)
-
-    fun clearProcessedFiles() {
+    fun clearProcessedFiles() =
         prefs.edit().putStringSet(processedKey, mutableSetOf()).apply()
-    }
 
     // --- 이력 로그 ---
     private val historyKey = "history_log"
     private val maxHistory = 200
 
-    fun addHistoryEntry(filename: String, status: String) {
+    fun addHistoryEntry(filename: String, status: String, timestamp: Long = System.currentTimeMillis()) {
         val callerName = extractCallerName(filename)
         val arr = try { JSONArray(prefs.getString(historyKey, "[]")) } catch (_: Exception) { JSONArray() }
         val entry = JSONObject().apply {
             put("fn", filename)
             if (callerName != null) put("cn", callerName) else put("cn", JSONObject.NULL)
-            put("ts", System.currentTimeMillis())
+            put("ts", timestamp)
             put("st", status)
         }
         arr.put(entry)
-        // 최대 200개 유지 (오래된 것 삭제)
         val trimmed = if (arr.length() > maxHistory) {
             val newArr = JSONArray()
             for (i in (arr.length() - maxHistory) until arr.length()) newArr.put(arr.get(i))
             newArr
         } else arr
         prefs.edit().putString(historyKey, trimmed.toString()).apply()
+    }
+
+    // 이미 이력에 있으면 건너뜀 — 이력 기능 없던 시절에 전송된 파일 소급 등록용
+    fun addHistoryEntryIfAbsent(filename: String, status: String, timestamp: Long) {
+        val arr = try { JSONArray(prefs.getString(historyKey, "[]")) } catch (_: Exception) { JSONArray() }
+        for (i in 0 until arr.length()) {
+            if (arr.getJSONObject(i).getString("fn") == filename) return
+        }
+        addHistoryEntry(filename, status, timestamp)
     }
 
     fun getHistory(): List<HistoryEntry> {
@@ -91,12 +97,10 @@ class PreferencesHelper(context: Context) {
                 status = obj.getString("st")
             ))
         }
-        return list.reversed()  // 최신순
+        return list.reversed()
     }
 
-    fun clearHistory() {
-        prefs.edit().putString(historyKey, "[]").apply()
-    }
+    fun clearHistory() = prefs.edit().putString(historyKey, "[]").apply()
 
     // --- 파일명 파싱 ---
     fun extractCallerName(filename: String): String? {
