@@ -16,7 +16,10 @@ class CallRecordingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         prefs = PreferencesHelper(this)
         startForeground(NOTIF_ID, buildNotification())
-        catchUpMissedFiles()
+        Thread {
+            prefs.migrateProcessedFilesToHistory()
+            catchUpMissedFiles()
+        }.start()
         startWatching()
         return START_STICKY
     }
@@ -32,25 +35,22 @@ class CallRecordingService : Service() {
         if (!folder.exists()) { prefs.recordError("감시 폴더 없음: ${prefs.watchFolder}"); return }
         val files = folder.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) }
         if (files == null) { prefs.recordError("폴더 읽기 실패 (권한 확인 필요): ${prefs.watchFolder}"); return }
-        Thread {
-            for (file in files) {
-                if (prefs.isFileProcessed(file.name)) {
-                    prefs.addHistoryEntryIfAbsent(file.name, "sent", file.lastModified())
-                    continue
-                }
-                if (!prefs.passesNameFilter(file.name)) {
-                    prefs.addHistoryEntry(file.name, "skipped")
-                    continue
-                }
-                try {
-                    sendCallRecording(smtpConfig(), file)
-                    prefs.markFileProcessed(file.name)
-                    prefs.addHistoryEntry(file.name, "sent")
-                } catch (e: Exception) {
-                    prefs.recordError("발송 실패 [${file.name}]: ${e.message}")
-                }
+        for (file in files) {
+            if (prefs.isFileProcessed(file.name)) {
+                prefs.addHistoryEntryIfAbsent(file.name, "sent", file.lastModified())
+                continue
             }
-        }.start()
+            if (!prefs.passesNameFilter(file.name)) {
+                prefs.addHistoryEntry(file.name, "skipped"); continue
+            }
+            try {
+                sendCallRecording(smtpConfig(), file)
+                prefs.markFileProcessed(file.name)
+                prefs.addHistoryEntry(file.name, "sent")
+            } catch (e: Exception) {
+                prefs.recordError("발송 실패 [${file.name}]: ${e.message}")
+            }
+        }
     }
 
     private fun startWatching() {
