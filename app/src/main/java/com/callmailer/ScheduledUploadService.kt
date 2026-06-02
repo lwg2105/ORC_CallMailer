@@ -30,10 +30,12 @@ class ScheduledUploadService : Service() {
             recipientEmail = prefs.recipientEmail
         )
         for (file in files) {
-            if (prefs.isFileProcessed(file.name)) continue
-            if (!prefs.passesNameFilter(file.name)) {
-                prefs.addHistoryEntry(file.name, "skipped")
+            if (prefs.isFileProcessed(file.name)) {
+                prefs.addHistoryEntryIfAbsent(file.name, "sent", file.lastModified())
                 continue
+            }
+            if (!prefs.passesNameFilter(file.name)) {
+                prefs.addHistoryEntry(file.name, "skipped"); continue
             }
             try {
                 sendCallRecording(config, file)
