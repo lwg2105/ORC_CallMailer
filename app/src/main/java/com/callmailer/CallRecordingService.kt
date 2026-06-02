@@ -34,7 +34,10 @@ class CallRecordingService : Service() {
         if (files == null) { prefs.recordError("폴더 읽기 실패 (권한 확인 필요): ${prefs.watchFolder}"); return }
         Thread {
             for (file in files) {
-                if (prefs.isFileProcessed(file.name)) continue
+                if (prefs.isFileProcessed(file.name)) {
+                    prefs.addHistoryEntryIfAbsent(file.name, "sent", file.lastModified())
+                    continue
+                }
                 if (!prefs.passesNameFilter(file.name)) {
                     prefs.addHistoryEntry(file.name, "skipped")
                     continue
@@ -62,8 +65,7 @@ class CallRecordingService : Service() {
                 val name = file.name
                 if (prefs.isFileProcessed(name)) return
                 if (!prefs.passesNameFilter(name)) {
-                    prefs.addHistoryEntry(name, "skipped")
-                    return
+                    prefs.addHistoryEntry(name, "skipped"); return
                 }
                 Thread {
                     try {
