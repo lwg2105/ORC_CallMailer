@@ -22,31 +22,27 @@ class CallRecordingService : Service() {
     }
 
     private fun smtpConfig() = SmtpConfig(
-        host = prefs.smtpHost,
-        port = prefs.smtpPort,
-        senderEmail = prefs.smtpUser,
-        senderPassword = prefs.smtpPassword,
+        host = prefs.smtpHost, port = prefs.smtpPort,
+        senderEmail = prefs.smtpUser, senderPassword = prefs.smtpPassword,
         recipientEmail = prefs.recipientEmail
     )
 
     private fun catchUpMissedFiles() {
         val folder = File(prefs.watchFolder)
-        if (!folder.exists()) {
-            prefs.recordError("감시 폴더 없음: ${prefs.watchFolder}")
-            return
-        }
+        if (!folder.exists()) { prefs.recordError("감시 폴더 없음: ${prefs.watchFolder}"); return }
         val files = folder.listFiles { f -> f.extension.equals("m4a", ignoreCase = true) }
-        if (files == null) {
-            prefs.recordError("폴더 읽기 실패 (권한 확인 필요): ${prefs.watchFolder}")
-            return
-        }
+        if (files == null) { prefs.recordError("폴더 읽기 실패 (권한 확인 필요): ${prefs.watchFolder}"); return }
         Thread {
             for (file in files) {
                 if (prefs.isFileProcessed(file.name)) continue
-                if (!prefs.passesNameFilter(file.name)) continue
+                if (!prefs.passesNameFilter(file.name)) {
+                    prefs.addHistoryEntry(file.name, "skipped")
+                    continue
+                }
                 try {
                     sendCallRecording(smtpConfig(), file)
                     prefs.markFileProcessed(file.name)
+                    prefs.addHistoryEntry(file.name, "sent")
                 } catch (e: Exception) {
                     prefs.recordError("발송 실패 [${file.name}]: ${e.message}")
                 }
@@ -65,11 +61,15 @@ class CallRecordingService : Service() {
                 val file = File(path, filePath)
                 val name = file.name
                 if (prefs.isFileProcessed(name)) return
-                if (!prefs.passesNameFilter(name)) return
+                if (!prefs.passesNameFilter(name)) {
+                    prefs.addHistoryEntry(name, "skipped")
+                    return
+                }
                 Thread {
                     try {
                         sendCallRecording(smtpConfig(), file)
                         prefs.markFileProcessed(name)
+                        prefs.addHistoryEntry(name, "sent")
                     } catch (e: Exception) {
                         prefs.recordError("발송 실패 [${name}]: ${e.message}")
                     }
@@ -88,16 +88,12 @@ class CallRecordingService : Service() {
     private fun buildNotification(): Notification {
         val channelId = "recording_watch"
         val nm = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-        if (nm.getNotificationChannel(channelId) == null) {
-            nm.createNotificationChannel(
-                NotificationChannel(channelId, "녹음 감시", NotificationManager.IMPORTANCE_LOW)
-            )
-        }
+        if (nm.getNotificationChannel(channelId) == null)
+            nm.createNotificationChannel(NotificationChannel(channelId, "녹음 감시", NotificationManager.IMPORTANCE_LOW))
         return NotificationCompat.Builder(this, channelId)
             .setContentTitle("통화녹음 감시 중")
             .setSmallIcon(android.R.drawable.ic_dialog_email)
-            .setOngoing(true)
-            .build()
+            .setOngoing(true).build()
     }
 
     companion object { private const val NOTIF_ID = 1 }
