@@ -34,8 +34,13 @@ jobs:
       - name: Set build version
         run: echo "BUILD_NUMBER=${{ github.run_number }}" >> $GITHUB_ENV
 
-      - name: Build debug APK
+      - name: Build APK
         run: gradle :app:assembleDebug
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEY_STORE_PASSWORD: ${{ secrets.KEY_STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
       - name: Create GitHub Release
         run: |
@@ -49,6 +54,6 @@ jobs:
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ORC-CallMailer-debug
+          name: CallMailer-debug
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
