@@ -17,8 +17,8 @@ class CallRecordingService : Service() {
         prefs = PreferencesHelper(this)
         startForeground(NOTIF_ID, buildNotification())
         Thread {
-            prefs.migrateProcessedFilesToHistory()
-            catchUpMissedFiles()
+            catchUpMissedFiles()                    // 1. 폴더 스캔 먼저 (실제 파일 타임스탬프 사용)
+            prefs.migrateProcessedFilesToHistory()  // 2. 폴더에 없는 나머지 processedFiles 소급 추가
         }.start()
         startWatching()
         return START_STICKY
